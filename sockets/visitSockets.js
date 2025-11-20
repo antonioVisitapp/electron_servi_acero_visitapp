@@ -96,11 +96,12 @@ socket.on(`take-tag-photo-car-${channel}`, (data) => {
 });
 
 // Serial reader
-serial.on('data', (folio) => {
-    if (folio.includes("visitor-")) visitorArrive(folio.split('visitor-')[1]);
-    else if (folio.includes("carrier-")) qrArrive(folio.split('carrier-')[1]);
-    else qrArrive(folio.length === 12 ? '0' + folio.substring(0, 11) : folio.substring(0, 12));
-});
+// serial.on('data', (folio) => {
+
+//     if (folio.includes("visitor-")) visitorArrive(folio.split('visitor-')[1]);
+//     else if (folio.includes("carrier-")) qrArrive(folio.split('carrier-')[1]);
+//     else qrArrive(folio.length === 12 ? '0' + folio.substring(0, 11) : folio.substring(0, 12));
+// });
 
 // Exportar función para inicializar sockets
 module.exports = function initSockets() {

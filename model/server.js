@@ -43,7 +43,7 @@ class Server {
     }
 
     initSockets() {
-        socket = initSockets();
+       const  socket = initSockets();
 
     }
 
@@ -59,7 +59,7 @@ class Server {
         this.middlewares();
         this.routes();
         this.initSockets();
-        this.initSerial();
+        // this.initSerial();
         this.server.listen(this.port, () => {
 
             console.log(`Server running on port ${this.port}`);
