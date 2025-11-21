@@ -137,38 +137,56 @@ class VisitSocket {
     /* -----------------------------------------
        IMPRESIÓN DE TICKETS
     ----------------------------------------- */
-    printTicket(ticketData) {
-        try {
-            const printer = new ThermalPrinter({
-                type: PrinterTypes.EPSON, // Cambiar según tu impresora
-                interface: 'printer:Mi_Impresora', // Nombre de la impresora conectada
-                characterSet: 'SLOVENIA',
-                removeSpecialCharacters: false,
-                lineChars: 48
-            });
+  printTicket(ticketData) {
+    try {
+        // === Contenido para consola ===
+        let ticketContent = "";
+        ticketContent += "==== TICKET DE VISITA ====\n";
+        ticketContent += `Folio: ${ticketData.folio}\n`;
+        ticketContent += `Visit ID: ${ticketData.visit_id}\n`;
+        ticketContent += `Ticket ID: ${ticketData.ticket_id}\n`;
+        ticketContent += `Asunto: ${ticketData.subject}\n`;
+        ticketContent += `Conductor: ${ticketData.driver}\n`;
+        ticketContent += `Camión: ${ticketData.truck}\n`;
+        ticketContent += `Tipo Ticket: ${ticketData.ticket_kind}\n`;
+        ticketContent += `Tipo Camión: ${ticketData.truck_kind}\n`;
+        ticketContent += "--------------------------------\n";
 
-            printer.alignCenter();
-            printer.println("==== TICKET DE VISITA ====");
-            printer.alignLeft();
-            printer.println(`Folio: ${ticketData.folio}`);
-            printer.println(`Visit ID: ${ticketData.visit_id}`);
-            printer.println(`Ticket ID: ${ticketData.ticket_id}`);
-            printer.println(`Asunto: ${ticketData.subject}`);
-            printer.println(`Conductor: ${ticketData.driver}`);
-            printer.println(`Camión: ${ticketData.truck}`);
-            printer.println(`Tipo Ticket: ${ticketData.ticket_kind}`);
-            printer.println(`Tipo Camión: ${ticketData.truck_kind}`);
-            printer.drawLine();
-            printer.cut();
+        console.log("=== CONTENIDO DEL TICKET ===");
+        console.log(ticketContent);
+        console.log("============================");
 
-            printer.execute()
-                .then(() => console.log("Ticket enviado a la impresora"))
-                .catch(err => console.error("Error al imprimir ticket:", err));
+        // === Impresión en impresora ===
+        const printer = new ThermalPrinter({
+            type: PrinterTypes.EPSON, // Cambia según tu impresora
+            interface: 'printer:epson1245', // Nombre de tu impresora
+            characterSet: 'SLOVENIA',
+            removeSpecialCharacters: false,
+            lineChars: 48
+        });
 
-        } catch (err) {
-            console.error("Fallo en la impresión:", err);
-        }
+        printer.alignCenter();
+        printer.println("==== TICKET DE VISITA ====");
+        printer.alignLeft();
+        printer.println(`Folio: ${ticketData.folio}`);
+        printer.println(`Visit ID: ${ticketData.visit_id}`);
+        printer.println(`Ticket ID: ${ticketData.ticket_id}`);
+        printer.println(`Asunto: ${ticketData.subject}`);
+        printer.println(`Conductor: ${ticketData.driver}`);
+        printer.println(`Camión: ${ticketData.truck}`);
+        printer.println(`Tipo Ticket: ${ticketData.ticket_kind}`);
+        printer.println(`Tipo Camión: ${ticketData.truck_kind}`);
+        printer.drawLine();
+        printer.cut();
+
+        printer.execute()
+            .then(() => console.log("Ticket enviado a la impresora"))
+            .catch(err => console.error("Error al imprimir ticket:", err));
+
+    } catch (err) {
+        console.error("Fallo en la generación o impresión del ticket:", err);
     }
+}
 
     /* -----------------------------------------
        EVENTOS SOCKET
