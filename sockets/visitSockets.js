@@ -143,8 +143,8 @@ class VisitSocket {
             console.log("=== CONTENIDO DEL TICKET ===");
             console.log(ticketData);
             console.log("============================");
-
-            const pt= new TicketPrinter('Brother QL-1110NWB');
+            const deviceName = 'EPSON L3250 Series';
+            const pt = new TicketPrinter(deviceName);
             await pt.printTicket(ticketData);
 
         } catch (err) {
