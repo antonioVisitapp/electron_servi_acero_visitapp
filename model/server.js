@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const morgan = require('morgan')
 const initSockets = require('../sockets/visitSockets');
 const SerialReader = require('../controller/serial_reader_controller');
+const VisitSocket = require('../sockets/visitSockets');
 
 
 const port = 8002
@@ -16,11 +17,12 @@ class Server {
         this.app = express();
         this.server = http.createServer(this.app);
         this.port = port;
+        this.socket
 
-        this.middlewares();
-        this.routes();
-        this.initSockets();
-        this.initSerial();
+        // this.middlewares();
+        // this.routes();
+        // this.initSockets();
+        // this.initSerial();
     }
 
     middlewares() {
@@ -42,10 +44,11 @@ class Server {
         });
     }
 
-    initSockets() {
-       const  socket = initSockets();
 
-    }
+initSockets() {
+    this.socket = new VisitSocket("serviacero-2");
+}
+
 
     initSerial() {
         const serial = new SerialReader('COM3');

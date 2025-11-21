@@ -1,39 +1,40 @@
+// printer.js
+const printer = require("pdf-to-printer");
+const path = require("path");
 
-const escpos = require('escpos');
-const moment = require('moment');
+class PrinterManager {
 
-class Printer {
-    
-    
-    device;
-    
-    constructor(data) {
-        this.data = data;
-        this.device = new escpos.USB();
-        this.print();
+    async listPrinters() {
+        try {
+            const printers = await printer.getPrinters();
+            console.log("===== Impresoras Detectadas =====");
+            printers.forEach((p, i) => {
+                console.log(`${i + 1}. ${p.name}`);
+            });
+            console.log("=================================");
+            return printers;
+        } catch (err) {
+            console.error("Error al listar impresoras:", err);
+        }
     }
-    
-    print() {
-        const printer = new escpos.Printer(this.device);
-        console.log('Printing data:', this.data);
-        // Aquí tu lógica real de impresión
 
+    async print(pdfPath, printerName = null) {
+        try {
+            const absolutePath = path.resolve(pdfPath);
 
-        const text = `Fecha: ${moment().format('DD/MM/YYYY, h:mm:ss a')}\nNum. de Visita: ${this.data.visit_id}\n` +
-            `Asunto: ${this.data.subject}\nNum. de ticket: ${this.data.ticket_id}\n` +
-            `Chofer: ${this.data.driver}\nTipo de ticket: ${this.data.ticket_kind}\n` +
-            `Tipo de camion: ${this.data.truck_kind}\nPlacas:${this.data.truck}`
-        this.device.open(() => {
-            printer
-                .encode('857')
-                .font('a')
-                .align('ct')
-                .style('bu')
-                .size(1, 1)
-                .text(text + '\n\nPresenta tu codigo al llegar a caseta.\n', '857')
-                .barcode(String(this.data.folio), 'EAN13', 200, 3, 'BELOW', 'B').cut().close();
-        });
+            console.log("Imprimiendo archivo:", absolutePath);
+
+            await printer.print(absolutePath, {
+                printer: printerName, // si es null, manda a la predeterminada
+                scale: "fit",
+                monochrome: true
+            });
+
+            console.log("Impresión enviada correctamente.");
+        } catch (err) {
+            console.error("Error al imprimir:", err);
+        }
     }
 }
 
-module.exports = Printer;
+module.exports = PrinterManager;
