@@ -3,18 +3,19 @@ const path = require('path');
 
 // Importar tu server
 const Server = require('./model/server');
+// const { default: TestPrint } = require('./controller/testPrinter');
 
 // Crear instancia del server
 const server = new Server();
 
 // Función para crear la ventana principal
-function createWindow() {
+async function createWindow() {
   const mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
     webPreferences: {
-     preload: path.join(__dirname, "preload.js"),
-  // disableBlinkFeatures: "Autofill",
+      preload: path.join(__dirname, "preload.js"),
+      // disableBlinkFeatures: "Autofill",
       nodeIntegration: true, // para simplificar testing
       contextIsolation: false,
     },
@@ -26,6 +27,8 @@ function createWindow() {
   mainWindow.webContents.openDevTools();
 
   // Iniciar tu servidor HTTP
+  // const testPrint = new TestPrint();
+  // await testPrint.test();
   server.listen();;
 }
 
