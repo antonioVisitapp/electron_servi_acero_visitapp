@@ -26,9 +26,6 @@ async function createWindow() {
   // Abrir DevTools opcional
   mainWindow.webContents.openDevTools();
 
-  // Iniciar tu servidor HTTP
-  // const testPrint = new TestPrint();
-  // await testPrint.test();
   server.listen();;
 }
 

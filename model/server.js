@@ -2,7 +2,6 @@ const express = require('express');
 const http = require('http');
 const bodyParser = require('body-parser');
 const morgan = require('morgan')
-const initSockets = require('../sockets/visitSockets');
 const SerialReader = require('../controller/serial_reader_controller');
 const VisitSocket = require('../sockets/visitSockets');
 
@@ -19,10 +18,6 @@ class Server {
         this.port = port;
         this.socket
 
-        // this.middlewares();
-        // this.routes();
-        // this.initSockets();
-        // this.initSerial();
     }
 
     middlewares() {
