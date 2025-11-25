@@ -143,7 +143,7 @@ class VisitSocket {
             console.log("=== CONTENIDO DEL TICKET ===");
             console.log(ticketData);
             console.log("============================");
-            const deviceName = 'EPSON L3250 Series';
+            const deviceName = 'EPSON TM-T20II Receipt';
             const pt = new TicketPrinter(deviceName);
             await pt.printTicket(ticketData);
 
