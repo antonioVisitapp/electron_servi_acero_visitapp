@@ -6,7 +6,11 @@ const Server = require('./model/server');
 // const { default: TestPrint } = require('./controller/testPrinter');
 
 // Crear instancia del server
-const server = new Server();
+const server = new Server({
+  channel: "serviacero-2",
+  token: "1e3a8be01c4cjsd98dss87ds4kjds0c9b256fcfce1e3a8b55d01c4c74e21c96efa5d01c375c96efed01266e0dbef53d0",
+  path: "/tickets/images/"
+});
 
 // Función para crear la ventana principal
 async function createWindow() {
@@ -16,8 +20,8 @@ async function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       // disableBlinkFeatures: "Autofill",
-      nodeIntegration: true, // para simplificar testing
-      contextIsolation: false,
+      nodeIntegration: false, // para simplificar testing
+      contextIsolation: true,
     },
   });
 
@@ -26,7 +30,8 @@ async function createWindow() {
   // Abrir DevTools opcional
   mainWindow.webContents.openDevTools();
 
-  server.listen();;
+  mainWindow.minimize();
+  server.listen();
 }
 
 // Eventos de la app
@@ -39,3 +44,4 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
+//  server.listen();
