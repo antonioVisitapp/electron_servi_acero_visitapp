@@ -1,78 +1,156 @@
-const request = require('request');
+const axios = require('axios');
 const fs = require('fs');
-const exec = require('child_process').exec;
+const { URLSearchParams } = require('url');
+const { exec } = require('child_process');
 
-const path = "/home/visitapp/VisitApp/VisitappIndustry/visitapp-insudstrial-localserver";
+class VisitService {
+    constructor(channel, token, path) {
+        this.channel = channel;
+        this.token = token;
+        this.basePath = path || "/home/visitapp/VisitApp/VisitappIndustry/visitapp-insudstrial-localserver";
+    }
 
-function qrArrive(folio, channel, token) {
-    const sendData = { channel, folio, token };
-    const formData = new URLSearchParams(sendData).toString();
-    const headers = { 'Content-Length': formData.length, 'Content-Type': 'application/x-www-form-urlencoded' };
-    request({ headers, uri: 'http://industrial.visitapp.com.mx:5004/api/v1/visits/carrier/qr', body: formData, method: 'POST' });
-}
+    // =======================================================================
+    //   QR CARRIER
+    // =======================================================================
+    async qrArrive(folio) {
+        try {
+            console.log('[qrArrive] folio:', folio);
 
-function visitorArrive(folio, channel) {
-    const sendData = { channel, folio };
-    const formData = new URLSearchParams(sendData).toString();
-    const headers = { 'Content-Length': formData.length, 'Content-Type': 'application/x-www-form-urlencoded' };
-    request({ headers, uri: 'http://industrial.visitapp.com.mx:5004/api/v1/visits/visitor/qr', body: formData, method: 'POST' }, (err, res, body) => {
-        if (err) console.error(err);
-        else console.log(body);
-    });
-}
+            const sendData = {
+                channel: this.channel,
+                folio,
+                token: this.token
+            };
+            console.log('sendData object')
+            console.log(sendData)
+            const formData = new URLSearchParams(sendData);
+            console.log(' formData.toString()', formData.toString())
+            const url = 'http://industrial.visitapp.com.mx:5004/api/v1/visits/carrier/qr'
+            const headers = {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            };
+            const body = formData.toString()
 
-function handleFolio(folio, channel, token) {
-    if (folio.includes("visitor-")) {
-        const folioSplit = folio.split('visitor-')[1];
-        visitorArrive(folioSplit, channel);
-    } else if (folio.includes("carrier-")) {
-        const folioSplit = folio.split('carrier-')[1];
-        qrArrive(folioSplit, channel, token);
-    } else {
-        const val = folio.length == 12 ? '0' + folio.substring(0, 11) : folio.substring(0, 12);
-        qrArrive(val, channel, token);
+            console.log('url: ', url)
+            console.log('body: ', body)
+            console.log('headers: ', headers)
+            const { data } = await axios.post(
+                url,
+                body,
+                {
+                    headers,
+                }
+            );
+
+            console.log('[qrArrive] respuesta:', data);
+
+        } catch (err) {
+            console.error('[qrArrive] ERROR:', err.message);
+        }
+    }
+
+
+
+    // =======================================================================
+    //   QR VISITOR
+    // =======================================================================
+    async visitorArrive(folio) {
+        try {
+            console.log('[visitorArrive] folio:', folio);
+
+            const sendData = {
+                channel: this.channel,
+                folio
+            };
+            const url = 'http://industrial.visitapp.com.mx:5004/api/v1/visits/visitor/qr';
+            const headers = {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            }
+            const formData = new URLSearchParams(sendData);
+
+            const { data } = await axios.post(
+                url,
+                formData.toString(),
+                {
+                    headers,
+                }
+            );
+
+            console.log('[visitorArrive] respuesta:', data);
+
+        } catch (err) {
+            console.error('[visitorArrive] ERROR:', err.message);
+        }
+    }
+
+    // =======================================================================
+    //   LÓGICA CENTRAL PARA TODOS LOS FOLIOS
+    // =======================================================================
+    async handleFolio(raw) {
+        console.log('[handleFolio] recibido:', raw);
+
+        let folio = raw.trim();
+
+        // -------------------------
+        // códigos especiales
+        // -------------------------
+        if (folio.startsWith("visitor-")) {
+            return this.visitorArrive(folio.replace("visitor-", ""));
+        }
+
+        if (folio.startsWith("carrier-")) {
+            return this.qrArrive(folio.replace("carrier-", ""));
+        }
+
+        // -------------------------
+        // códigos simples (12 dígitos)
+        // -------------------------
+        if (folio.length >= 12) {
+            folio = folio.substring(0, 12);  // nunca pierde dígitos
+        }
+
+        // si exactamente 12 → agregar 0 al inicio (regla anterior)
+        if (folio.length === 12) {
+            folio = "0" + folio.substring(0, 11);
+        }
+
+        return this.qrArrive(folio);
+    }
+
+    // =======================================================================
+    //   FOTOS
+    // =======================================================================
+    async takePhotos(data) {
+        console.log('[takePhotos] ejecutado');
+        const filename = `/${reference}.jpg`;
+        console.log('filename', filename)
+        exec(`wget ${url} -O ${filename}`, () => {
+            const formData = {
+                'visit[token]': this.token,
+                'visit[reference]': reference,
+                'visit[camera_id]': camera_id,
+                'visit[file]': fs.createReadStream(filename)
+            };
+
+            request.post({
+                url: `http://industrial.visitapp.com.mx:3001/api/v1/visits-access/upload/${id}`,
+                headers: { 'Content-Type': 'multipart/form-data' },
+                formData
+            }, (err) => {
+                if (err) console.error('upload failed:', err);
+            });
+        });
+    }
+
+    // =======================================================================
+    //   FOTO DE TAG
+    // =======================================================================
+    async uploadTagPhotos(data, kind) {
+        console.log('[uploadTagPhotos] ejecutado');
+
+        // Aquí puedes migrar cuando uses axios
     }
 }
 
-// Función para tomar foto
-function takePhotos(data, token) {
-    const id = data.id;
-    data.cameras.forEach(camera => {
-        const filename = `/${camera.reference}.jpg`;
-        exec('wget ' + camera.url + ' -O ' + path + filename, (err) => {
-            if (err) console.error(err);
-            const formData = {
-                'visit[token]': token,
-                'visit[reference]': camera.reference,
-                'visit[camera_id]': camera.id,
-                'visit[file]': fs.createReadStream(path + filename)
-            };
-            request.post({ url: `http://industrial.visitapp.com.mx:3001/api/v1/visits-access/upload/${id}`, headers: { 'Content-Type': 'multipart/form-data' }, formData });
-        });
-    });
-}
-
-// Función para subir foto de tag
-function uploadTagPhotos(data, kind, token) {
-    const id = data.id;
-    const url = `http://industrial.visitapp.com.mx:3001/api/v1/cameras-by-kind?branch=2&kind=${kind}`;
-    request(url, null, (err, res, body) => {
-        if (err) return console.error(err);
-        try {
-            const cameras = JSON.parse(body);
-            cameras.forEach(camera => {
-                const formData = {
-                    'visit[token]': token,
-                    'visit[reference]': camera.reference,
-                    'visit[camera_id]': camera.id,
-                    'visit[file]': fs.createReadStream(path + "/" + camera.reference + "_old.jpg")
-                };
-                request.post({ url: `http://industrial.visitapp.com.mx:3001/api/v1/visits-access/upload/${id}`, headers: { 'Content-Type': 'multipart/form-data' }, formData });
-            });
-        } catch (error) {
-            console.log(error);
-        }
-    });
-}
-
-module.exports = { handleFolio, takePhotos, uploadTagPhotos };
+module.exports = VisitService;
