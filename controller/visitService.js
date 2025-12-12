@@ -26,7 +26,7 @@ class VisitService {
             console.log(sendData)
             const formData = new URLSearchParams(sendData);
             console.log(' formData.toString()', formData.toString())
-            const url = 'http://industrial.visitapp.com.mx:5004/api/v1/visits/carrier/qr'
+            const url = `https://api-industrial.visitapp.io/api/v1/visits/access-carrier/${folio}`
             const headers = {
                 'Content-Type': 'application/x-www-form-urlencoded'
             };
@@ -35,7 +35,7 @@ class VisitService {
             console.log('url: ', url)
             console.log('body: ', body)
             console.log('headers: ', headers)
-            const { data } = await axios.post(
+            const { data } = await axios.put(
                 url,
                 body,
                 {
@@ -47,6 +47,7 @@ class VisitService {
 
         } catch (err) {
             console.error('[qrArrive] ERROR:', err.message);
+            return
         }
     }
 
@@ -134,7 +135,7 @@ class VisitService {
             };
 
             request.post({
-                url: `http://industrial.visitapp.com.mx:3001/api/v1/visits-access/upload/${id}`,
+                url: `https://industrial.visitapp.io/api/v1/visits-access/upload/${id}`,
                 headers: { 'Content-Type': 'multipart/form-data' },
                 formData
             }, (err) => {

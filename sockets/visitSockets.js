@@ -5,7 +5,8 @@ const { exec } = require('child_process');
 const io = require('socket.io-client');
 const FormData = require('form-data');
 const TicketPrinter = require('../controller/TicketPrinter');
-
+const { config } = require('../config/config');
+const sharp = require("sharp");
 class VisitSocket {
 
     constructor(channel, token, basePath) {
@@ -46,10 +47,10 @@ class VisitSocket {
 
     /* -----------------------------------------
        QR CARRIER
-    ----------------------------------------- */
+    // ----------------------------------------- */
     async qrArrive(folio) {
         try {
-            const url = 'http://industrial.visitapp.com.mx:5004/api/v1/visits/carrier/qr';
+            const url = 'https://ws-industrial.visitapp.io/api/v1/visits/carrier/qr';
             const body = new URLSearchParams({
                 channel: this.channel,
                 folio,
@@ -102,11 +103,70 @@ class VisitSocket {
             console.error("[visitorArrive] ERROR:", e.message);
         }
     }
+    async downloadFile(url, filename) {
+        const writer = fs.createWriteStream(filename);
+        console.log('url', url)
+        console.log('filename', filename)
+        const response = await axios({
+            url,
+            method: "GET",
+            responseType: "stream"
+        });
 
+        response.data.pipe(writer);
+        // console.log('response.data de la imagen')
+        // console.log(response.data)
+
+        return new Promise((resolve, reject) => {
+            writer.on("finish", resolve);
+            writer.on("error", reject);
+        });
+    }
+
+    async uploadVisitPhoto(url, filename, token, reference, camera_id, id) {
+        try {
+            console.log('-----------------------uploadVisitPhoto-------------------------------------')
+            await this.downloadFile(url, filename);
+            console.log("********************Imagen descargada correctamente:", reference, '********************');
+            const compressedPath = filename.replace(".jpg", "_compressed.jpg");
+
+            await sharp(filename)
+                .jpeg({ quality: 75 }) // compresión
+                .toFile(compressedPath);
+                console.log('compressedPath',compressedPath)
+            const form = new FormData();
+            form.append("visit[token]", token);
+            form.append("visit[reference]", reference);
+            form.append("visit[camera_id]", camera_id);
+            form.append("visit[file]", fs.createReadStream(compressedPath));
+
+            const uploadUrl = `${config.VISITAPP.URL_SERVER_INDUSTRY}${config.VISITAPP.ENDPOINTS.UPLOAD_PHOTO(id)}`;
+            console.log('-------------uploadUrl:', uploadUrl)
+            console.log('form.getHeaders():', form.getHeaders())
+            const { data } = await axios.post(uploadUrl, form, {
+                headers: form.getHeaders()
+            });
+
+            console.log("Foto enviada correctamente:", data);
+
+        } catch (err) {
+            console.error("Error en uploadVisitPhoto:", err.message);
+
+        } finally {
+            try {
+                if (fs.existsSync(filename)) {
+                    fs.unlinkSync(filename);
+                    console.log("Archivo temporal eliminado:", filename);
+                }
+            } catch (e) {
+                console.error("No se pudo borrar el archivo temporal:", e.message);
+            }
+        }
+    }
     /* -----------------------------------------
        SUBIR FOTO (FUNCIONA CON AXIOS + FORMDATA)
     ----------------------------------------- */
-    takePhoto(id, url, reference, kind, camera_id) {
+    async takePhoto(id, url, reference, kind, camera_id) {
         console.log("\n[takePhoto] -----------------------------");
 
         const filename = path.join(this.basePath, `${reference}.jpg`);
@@ -117,33 +177,12 @@ class VisitSocket {
         console.log("url original:", url);
 
         // URL temporal para pruebas
-        url = `https://babymetal.com/contents/1/TO/Title%20SQ2.png`;
-        console.log("url usada:", url);
+        let urlTest = `https://babymetal.com/contents/1/TO/Title%20SQ2.png`;
+        console.log("url usada:", urlTest);
 
-        exec(`wget ${url} -O ${filename}`, async () => {
-            try {
-                const form = new FormData();
-                form.append('visit[token]', this.token);
-                form.append('visit[reference]', reference);
-                form.append('visit[camera_id]', camera_id);
-                form.append('visit[file]', fs.createReadStream(filename));
 
-                const uploadUrl = `http://industrial.visitapp.com.mx:3001/api/v1/visits-access/upload/${id}`;
+        await this.uploadVisitPhoto(urlTest, filename, this.token, reference, camera_id, id)
 
-                console.log("url:", uploadUrl);
-                console.log("headers:", form.getHeaders());
-                console.log("body (form-data): archivos adjuntos");
-
-                const { data } = await axios.post(uploadUrl, form, {
-                    headers: form.getHeaders()
-                });
-
-                console.log("[takePhoto] data:", data);
-
-            } catch (err) {
-                console.error("[takePhoto] ERROR SUBIENDO FOTO:", err.message);
-            }
-        });
     }
 
     /* -----------------------------------------
@@ -235,12 +274,14 @@ class VisitSocket {
             this.printTicket(data);
         });
 
-        this.socket.on(`take-photo-${this.channel}`, (data) => {
+        this.socket.on(`take-photo-${this.channel}`, async (data) => {
             console.log(`EVENTO => take-photo-${this.channel}`);
-            data.cameras.forEach(cam =>
-                this.takePhoto(data.id, cam.url, cam.reference, cam.kind, cam.id)
-            );
-        });
+            for (const cam of data.cameras) {
+
+                await this.takePhoto(data.id, cam.url, cam.reference, cam.kind, cam.id)
+
+            }
+        })
 
         this.socket.on(`take-tag-photo-walking-${this.channel}`, (data) => {
             console.log(` EVENTO => take-tag-photo-walking-${this.channel}`);

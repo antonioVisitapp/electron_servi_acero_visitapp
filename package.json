@@ -34,6 +34,7 @@
     "pdfkit": "^0.17.2",
     "request": "^2.88.2",
     "serialport": "^13.0.0",
+    "sharp": "^0.34.5",
     "socket.io-client": "^2.4.0",
     "usb": "^2.16.0",
     "util": "^0.12.5"

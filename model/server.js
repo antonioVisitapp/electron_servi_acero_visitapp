@@ -17,9 +17,9 @@ async function onScan(folio) {
     console.log('dentro de onscan')
     if (!folio) return
 
-    console.log('global_channel',global_channel)
-    console.log('global_token',global_token)
-    console.log('global_path',global_path)
+    console.log('global_channel', global_channel)
+    console.log('global_token', global_token)
+    console.log('global_path', global_path)
     const visitService = new VisitService(global_channel, global_token, global_path);
     // const visitObject = new VisitSocket(global_channel, global_token, global_path);
     console.log("codigo recibido:", folio);
@@ -31,7 +31,7 @@ async function onScan(folio) {
         await visitService.qrArrive(folioSplit);
     } else {
         if (folio.length == 12) {
-            await visitService.qrArrive(0 + folio.substring(0, 11))
+            await visitService.qrArrive(folio.substring(0, 11))
         } else {
             await visitService.qrArrive(folio.substring(0, 12))
         }
@@ -51,6 +51,7 @@ async function onScan(folio) {
 
     // // ejemplo tag
     // visitService.uploadTagPhotos({ id: 55 }, "car");
+
 
 }
 class Server {
@@ -110,11 +111,24 @@ class Server {
         }
     }
 
+    async test() {
+
+        const objetc = new VisitSocket(
+            this.channel,
+            this.token,
+            this.path
+        );
+        let urlTest = `https://babymetal.com/contents/1/TO/Title%20SQ2.png`;
+        await objetc.downloadFile(urlTest,this.path+'babymetal.jpg')
+    }
+
+
     listen() {
         this.middlewares();
         this.routes();
         this.initSockets();
         this.readEvents();
+        // this.test();
         this.server.listen(this.port, () => {
             console.log(`Server running on port ${this.port}`);
         });
