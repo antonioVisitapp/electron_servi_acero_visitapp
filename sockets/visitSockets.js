@@ -1,7 +1,6 @@
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-const { exec } = require('child_process');
 const io = require('socket.io-client');
 const FormData = require('form-data');
 const TicketPrinter = require('../controller/TicketPrinter');
@@ -14,7 +13,7 @@ class VisitSocket {
         this.token = token;
         this.basePath = basePath || "/home/visitapp/VisitApp/VisitappIndustry/visitapp-insudstrial-localserver";
 
-        this.socket = io.connect("https://ws-industrial.visitapp.io/", {
+        this.socket = io.connect(config.VISITAPP.URL_SOCKETS_INDUSTRY, {
             transports: ["websocket"],
             reconnection: true,
             reconnectionAttempts: Infinity,
@@ -46,11 +45,36 @@ class VisitSocket {
     }
 
     /* -----------------------------------------
+       EVENTOS SOCKET
+    ----------------------------------------- */
+    registerEvents() {
+   console.log("========================SOCKETS EN ESCUCHA==============================");
+        this.socket.on(`print-ticket-${this.channel}`, (data) => {
+            console.log(`EVENTO => print-ticket-${this.channel}`);
+            this.printTicket(data);
+        });
+        this.socket.on(`take-photo-${this.channel}`, async (data) => {
+            console.log(`EVENTO => take-photo-${this.channel}`);
+            for (const cam of data.cameras) {
+                await this.takePhoto(data.id, cam.url, cam.reference, cam.kind, cam.id)
+            }
+        })
+        this.socket.on(`take-tag-photo-walking-${this.channel}`, (data) => {
+            console.log(` EVENTO => take-tag-photo-walking-${this.channel}`);
+            this.takeTagPhotoWalking(data);
+        });
+        this.socket.on(`take-tag-photo-car-${this.channel}`, (data) => {
+            console.log(` EVENTO => take-tag-photo-car-${this.channel}`);
+            this.takeTagPhotoCar(data);
+        });
+    }
+
+    /* -----------------------------------------
        QR CARRIER
     // ----------------------------------------- */
     async qrArrive(folio) {
         try {
-            const url = 'https://ws-industrial.visitapp.io/api/v1/visits/carrier/qr';
+            const url = `${config.VISITAPP.URL_SOCKETS_INDUSTRY}visits/carrier/qr`;
             const body = new URLSearchParams({
                 channel: this.channel,
                 folio,
@@ -80,7 +104,7 @@ class VisitSocket {
     ----------------------------------------- */
     async visitorArrive(folio) {
         try {
-            const url = 'http://industrial.visitapp.com.mx:5004/api/v1/visits/visitor/qr';
+            const url = `${config.VISITAPP.URL_SERVER_INDUSTRY}visits/visitor/qr`;
             const body = new URLSearchParams({
                 channel: this.channel,
                 folio
@@ -133,21 +157,24 @@ class VisitSocket {
             await sharp(filename)
                 .jpeg({ quality: 75 }) // compresión
                 .toFile(compressedPath);
-                console.log('compressedPath',compressedPath)
+            console.log('compressedPath', compressedPath)
             const form = new FormData();
-            form.append("visit[token]", token);
-            form.append("visit[reference]", reference);
-            form.append("visit[camera_id]", camera_id);
+            form.append("id", camera_id);
             form.append("visit[file]", fs.createReadStream(compressedPath));
+            form.append("visit[camera_id]", camera_id);
+            // form.append("visit[reference]", reference);
 
             const uploadUrl = `${config.VISITAPP.URL_SERVER_INDUSTRY}${config.VISITAPP.ENDPOINTS.UPLOAD_PHOTO(id)}`;
-            console.log('-------------uploadUrl:', uploadUrl)
-            console.log('form.getHeaders():', form.getHeaders())
+            // console.log('-------------uploadUrl:', uploadUrl)
+            // console.log('form.getHeaders():', form.getHeaders())
             const { data } = await axios.post(uploadUrl, form, {
-                headers: form.getHeaders()
+                headers: {
+                    "Authorization": `${token}`,
+                    ...form.getHeaders()
+                }
             });
 
-            console.log("Foto enviada correctamente:", data);
+            // console.log("Foto enviada correctamente:", data);
 
         } catch (err) {
             console.error("Error en uploadVisitPhoto:", err.message);
@@ -177,11 +204,11 @@ class VisitSocket {
         console.log("url original:", url);
 
         // URL temporal para pruebas
-        let urlTest = `https://babymetal.com/contents/1/TO/Title%20SQ2.png`;
+        // let urlTest = `https://babymetal.com/contents/1/TO/Title%20SQ2.png`;
         console.log("url usada:", urlTest);
 
 
-        await this.uploadVisitPhoto(urlTest, filename, this.token, reference, camera_id, id)
+        await this.uploadVisitPhoto(url, filename, this.token, reference, camera_id, id)
 
     }
 
@@ -189,7 +216,12 @@ class VisitSocket {
        FOTO TAG
     ----------------------------------------- */
     uploadTagPhoto(id, url, reference, kind, camera_id) {
-        console.log("[uploadTagPhoto] pendiente de implementar con axios + form-data");
+         console.log("\n[takePhoto] -----------------------------");
+        //TODO pendiente para la caraga de foto 
+        const filename=path.join(this.basePath,`${reference}.jpg`)
+        //  let urlTest = `https://www.serviacero.com/wp-content/uploads/2024/02/DSC_3649-scaled.jpg`;
+       uploadVisitPhoto(url,filename,this.token,reference,camera_id,id);
+
     }
 
     /* -----------------------------------------
@@ -201,7 +233,7 @@ class VisitSocket {
             console.log(ticketData);
             console.log("============================");
 
-            const pt = new TicketPrinter("EPSON TM-T20II Receipt5");
+            const pt = new TicketPrinter(config.PRINTER_NAME);
             await pt.print(ticketData);
 
         } catch (err) {
@@ -213,7 +245,7 @@ class VisitSocket {
         const id = data.id;
 
         try {
-            const url = "http://industrial.visitapp.com.mx:3001/api/v1/cameras-by-kind?branch=2&kind=walking";
+            const url = `${config.VISITAPP.URL_SERVER_INDUSTRY}cameras-by-kind?branch=2&kind=walking`;
             console.log("url:", url);
 
             const { data: cameras } = await axios.get(url);
@@ -240,7 +272,7 @@ class VisitSocket {
         const id = data.id;
 
         try {
-            const url = "http://industrial.visitapp.com.mx:3001/api/v1/cameras-by-kind?branch=2&kind=car";
+            const url = `${config.VISITAPP.URL_SERVER_INDUSTRY}cameras-by-kind?branch=2&kind=car`;
             console.log("url:", url);
 
             const { data: cameras } = await axios.get(url);
@@ -264,36 +296,7 @@ class VisitSocket {
     }
 
 
-    /* -----------------------------------------
-       EVENTOS SOCKET
-    ----------------------------------------- */
-    registerEvents() {
 
-        this.socket.on(`print-ticket-${this.channel}`, (data) => {
-            console.log(`EVENTO => print-ticket-${this.channel}`);
-            this.printTicket(data);
-        });
-
-        this.socket.on(`take-photo-${this.channel}`, async (data) => {
-            console.log(`EVENTO => take-photo-${this.channel}`);
-            for (const cam of data.cameras) {
-
-                await this.takePhoto(data.id, cam.url, cam.reference, cam.kind, cam.id)
-
-            }
-        })
-
-        this.socket.on(`take-tag-photo-walking-${this.channel}`, (data) => {
-            console.log(` EVENTO => take-tag-photo-walking-${this.channel}`);
-            this.takeTagPhotoWalking(data);
-        });
-
-        this.socket.on(`take-tag-photo-car-${this.channel}`, (data) => {
-            console.log(` EVENTO => take-tag-photo-car-${this.channel}`);
-            this.takeTagPhotoCar(data);
-        });
-
-    }
 
 }
 

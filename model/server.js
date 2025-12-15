@@ -90,6 +90,7 @@ class Server {
 
 
     initSockets() {
+        console.log('init sokcets server:--------------')
         this.socket = new VisitSocket(
             this.channel,
             this.token, this.path);
@@ -124,6 +125,7 @@ class Server {
 
 
     listen() {
+        console.log('sever listen')
         this.middlewares();
         this.routes();
         this.initSockets();
