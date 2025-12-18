@@ -1,6 +1,6 @@
 export const config = {
     SERVER_PORT: '',
-    PRINTER_NAME:'EPSON TM-T20II Receipt5',
+    PRINTER_NAME:'EPSON TM-T20II Receipt',
     VISITAPP: {
         URL_SERVER_INDUSTRY: 'https://api-industrial.visitapp.io/api/v1/',
         URL_SOCKETS_INDUSTRY: 'https://ws-industrial.visitapp.io/',

@@ -5,7 +5,7 @@ const io = require('socket.io-client');
 const FormData = require('form-data');
 const TicketPrinter = require('../controller/TicketPrinter');
 const { config } = require('../config/config');
-const sharp = require("sharp");
+const DigestClient = require("digest-fetch");
 class VisitSocket {
 
     constructor(channel, token, basePath) {
@@ -127,46 +127,45 @@ class VisitSocket {
             console.error("[visitorArrive] ERROR:", e.message);
         }
     }
-    async downloadFile(url, filename) {
-        const writer = fs.createWriteStream(filename);
-        console.log('url', url)
-        console.log('filename', filename)
-        const response = await axios({
-            url,
-            method: "GET",
-            responseType: "stream"
-        });
+  async downloadFile(url, filename) {
+  console.log("url", url);
+  console.log("filename", filename);
 
-        response.data.pipe(writer);
-        // console.log('response.data de la imagen')
-        // console.log(response.data)
+  const writer = fs.createWriteStream(filename);
 
-        return new Promise((resolve, reject) => {
-            writer.on("finish", resolve);
-            writer.on("error", reject);
-        });
-    }
+  // 👉 Credenciales AXIS
+  const client = new DigestClient("root", "root");
+
+  const response = await client.fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`AXIS HTTP ${response.status}`);
+  }
+
+  await new Promise((resolve, reject) => {
+    response.body.pipe(writer);
+    response.body.on("error", reject);
+    writer.on("finish", resolve);
+  });
+}
 
     async uploadVisitPhoto(url, filename, token, reference, camera_id, id) {
         try {
             console.log('-----------------------uploadVisitPhoto-------------------------------------')
+            const filename = path.join(this.basePath, `${reference}.jpg`);
             await this.downloadFile(url, filename);
             console.log("********************Imagen descargada correctamente:", reference, '********************');
-            const compressedPath = filename.replace(".jpg", "_compressed.jpg");
-
-            await sharp(filename)
-                .jpeg({ quality: 75 }) // compresión
-                .toFile(compressedPath);
-            console.log('compressedPath', compressedPath)
+           
             const form = new FormData();
             form.append("id", camera_id);
-            form.append("visit[file]", fs.createReadStream(compressedPath));
+            form.append('visit[file]', fs.createReadStream(filename));
             form.append("visit[camera_id]", camera_id);
             // form.append("visit[reference]", reference);
 
             const uploadUrl = `${config.VISITAPP.URL_SERVER_INDUSTRY}${config.VISITAPP.ENDPOINTS.UPLOAD_PHOTO(id)}`;
-            // console.log('-------------uploadUrl:', uploadUrl)
-            // console.log('form.getHeaders():', form.getHeaders())
+            console.log('-------------uploadUrl:', uploadUrl)
+            console.log('token',token)
+            console.log('form.getHeaders():', form.getHeaders())
             const { data } = await axios.post(uploadUrl, form, {
                 headers: {
                     "Authorization": `${token}`,
@@ -174,7 +173,7 @@ class VisitSocket {
                 }
             });
 
-            // console.log("Foto enviada correctamente:", data);
+            console.log("Foto enviada correctamente:", data);
 
         } catch (err) {
             console.error("Error en uploadVisitPhoto:", err.message);
@@ -205,7 +204,7 @@ class VisitSocket {
 
         // URL temporal para pruebas
         // let urlTest = `https://babymetal.com/contents/1/TO/Title%20SQ2.png`;
-        console.log("url usada:", urlTest);
+        // console.log("url usada:", urlTest);
 
 
         await this.uploadVisitPhoto(url, filename, this.token, reference, camera_id, id)

@@ -1,18 +1,28 @@
-// test_print.js
-const TicketPrinter = require("./controller/TicketPrinter");
+const ThermalPrinter = require("node-thermal-printer").printer;
+const PrinterTypes = require("node-thermal-printer").types;
 
-const ticketData = {
-  folio: "252141106488",
-  ticket_id: "278113",
-  subject: "Visita de transportista",
-  driver: "FERMIN JASSO AGUILERA",
-  truck: "GT2533C",
-  ticket_kind: "Embarque de Material",
-  truck_kind: "Trailer Kenworth",
-};
+async function test() {
+  console.log("Iniciando test Node...");
 
-const printer = new TicketPrinter("EPSON TM-T20II Receipt5");
+  const printer = new ThermalPrinter({
+    type: PrinterTypes.EPSON,
+    interface: "\\\\localhost\\EPSON TM-T20II Receipt",
+    options: {
+      encoding: "CP437",
+    },
+  });
 
-(async () => {
-  await printer.print(ticketData);
-})();
+  printer.alignCenter();
+  printer.println("=== TEST NODE ===");
+  printer.println("EPSON TM-T20II");
+  printer.println("Windows OK");
+  printer.println(new Date().toLocaleString());
+  printer.cut();
+
+  const result = await printer.execute();
+  console.log("Resultado:", result);
+}
+
+test().catch(err => {
+  console.error("❌ Error Node:", err);
+});
